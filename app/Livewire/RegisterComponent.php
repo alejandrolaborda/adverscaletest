@@ -6,27 +6,39 @@ use App\Livewire\Forms\RegisterForm;
 use Livewire\Component;
 use Carbon\Carbon;
 use Livewire\Attributes\Title;
-use Livewire\Attributes\On;
 
 #[Title('Personal Information Form')]
 class RegisterComponent extends Component
 {
+    const VALID_STEPS = ['step-one', 'step-two'];
+
     public RegisterForm $form;
 
     public $currentStep = 'step-one';
 
-    private $validSteps = ['step-one', 'step-two'];
-
-
     /**
      * Set the current step.
      */
-    #[On('set-step')]
-    public function setStep($stepName)
+    public function setStep(string $stepName)
     {
-        if (in_array($stepName, $this->validSteps)) {
-            $this->currentStep = $stepName;
+        if (!in_array($stepName, self::VALID_STEPS)) {
+            return;
         }
+
+        //if going to step 2, validate step 1 first
+        if($stepName === 'step-two'){
+            $this->form->validateFirstPage();
+        }
+        
+        $this->currentStep = $stepName;
+    }
+
+    /**
+     * Reset the form.
+     */
+    public function resetForm()
+    {
+        $this->form->reset(); 
     }
 
     /**
@@ -34,7 +46,9 @@ class RegisterComponent extends Component
      */
     public function save()
     {
-        //$this->form->store();
+        $this->form->validateSecondPage(); 
+
+        $this->form->store();
 
         session()->flash('result-data', [
             'First Name' => $this->form->firstName,
@@ -49,8 +63,6 @@ class RegisterComponent extends Component
             'Widowed' => $this->form->isMarried ? 'N/A' : ($this->form->isWidowed ? 'Yes' : 'No'),
             'Ever Married' => $this->form->isMarried ? 'N/A' : ($this->form->isEverMarried ? 'Yes' : 'No'),
         ]);
-
-        session()->forget('form-values');
 
         return redirect()->to('/result');
     }

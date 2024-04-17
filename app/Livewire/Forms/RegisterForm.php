@@ -2,22 +2,28 @@
 
 namespace App\Livewire\Forms;
 
+use App\Rules\ValidDateOfBirth;
+use App\Rules\ValidDateOfMarriage;
 use Livewire\Attributes\Validate;
 use Livewire\Form;
-use Carbon\Carbon;
 
 class RegisterForm extends Form
 {
+    const ERROR_MESSAGES = [
+        'isMarried' => 'You must indicate if you are married.',
+        'countryOfBirth' => 'The country of origin field is required.',
+        'countryOfMarriage' => 'The country of marriage field is required.',
+        'isWidowed' => 'You must indicate if you are widowed.',
+        'isEverMarried' => 'You must indicate if you have you ever been married in the past.',
+    ];
+
     // First Page
     #[Validate] 
-    public $firstName, $lastName, $address, $city, $countryOfBirth, $dateOfBirthMonth, $dateOfBirthDay, $dateOfBirthYear;
+    public $firstName, $lastName, $address, $city, $countryOfBirth, $dateOfBirthMonth, $dateOfBirthDay, $dateOfBirthYear, $dateOfBirth;
 
     // Second Page
     #[Validate] 
-    public $isMarried, $dateOfMarriageDay, $dateOfMarriageMonth, $dateOfMarriageYear, $countryOfMarriage, $isWidowed, $isEverMarried;
-
-    const COUNTRIES = ['US' => 'United States', 'ES' => 'Spain', 'CA' => 'Canada', 'GB' => 'United Kingdom', 'FR' => 'France', 'DE' => 'Germany', 'IE' => 'Ireland'];
-    const MONTHS = [ 1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April', 5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August', 9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'];
+    public $isMarried, $dateOfMarriageDay, $dateOfMarriageMonth, $dateOfMarriageYear, $dateOfMarriage, $countryOfMarriage, $isWidowed, $isEverMarried;
 
     /**
      * Validation rules
@@ -30,17 +36,13 @@ class RegisterForm extends Form
             'address' => 'required|string|between:1,255',
             'city' => 'required|string|between:1,255',
             'countryOfBirth' => 'required|string|size:2',
-            'dateOfBirthDay' => 'required|integer|between:1,31',
-            'dateOfBirthMonth' => 'required|integer|between:1,12',
-            'dateOfBirthYear' => 'required|integer|between:1900,'.date('Y'),
+            'dateOfBirth' => new ValidDateOfBirth,
             
             'isMarried' => 'required|boolean',
-            'dateOfMarriageDay' => 'required_if:isMarried,true|integer|between:1,31',
-            'dateOfMarriageMonth' => 'required_if:isMarried,true|integer|between:1,12',
-            'dateOfMarriageYear' => 'required_if:isMarried,true|integer|between:1900,'.date('Y'),
-            'countryOfMarriage' => 'required_if:isMarried,true|string|size:2',
-            'isWidowed' => 'required_if:isMarried,false|boolean',
-            'isEverMarried' => 'required_if:isMarried,false|boolean',
+            'dateOfMarriage' => new ValidDateOfMarriage,
+            'countryOfMarriage' => 'required_if_accepted:isMarried|string|size:2|nullable',
+            'isWidowed' => 'nullable|required_if_declined:isMarried|boolean',
+            'isEverMarried' => 'nullable|required_if_declined:isMarried|boolean',
         ];
     }
 
@@ -49,7 +51,7 @@ class RegisterForm extends Form
      */
     public function validateFirstPage()
     {
-        $this->validate(array_slice($this->rules(),0,8));
+        $this->validate(array_slice($this->rules(),0,6), self::ERROR_MESSAGES);
     }
 
     /**
@@ -57,34 +59,14 @@ class RegisterForm extends Form
      */
     public function validateSecondPage()
     {
-        $this->validate(array_slice($this->rules(),8));
-
-        //Validate age at marriage. Could also create a custom rule for this.
-        $dateOfBirth = Carbon::createFromDate($this->dateOfBirthYear, $this->dateOfBirthMonth, $this->dateOfBirthDay);
-        $dateOfMarriage = Carbon::createFromDate($this->dateOfMarriageYear, $this->dateOfMarriageMonth, $this->dateOfMarriageDay);
-
-        if ($this->isMarried && $dateOfMarriage->diffInYears($dateOfBirth) < 18) {
-            $this->addError('marriage18', 'You are not eligible to apply because your marriage occurred before your 18th birthday.');
-            return;
-        }
+        $this->validate(array_slice($this->rules(),6), self::ERROR_MESSAGES); 
     }  
 
     /**
      * Store the form
      */
     public function store() 
-    {
-        $this->validate();
-
-        //Validate age at marriage. Could also create a custom rule for this.
-        $dateOfBirth = Carbon::createFromDate($this->dateOfBirthYear, $this->dateOfBirthMonth, $this->dateOfBirthDay);
-        $dateOfMarriage = Carbon::createFromDate($this->dateOfMarriageYear, $this->dateOfMarriageMonth, $this->dateOfMarriageDay);
-
-        if ($this->isMarried && $dateOfMarriage->diffInYears($dateOfBirth) < 18) {
-            $this->addError('marriage18', 'You are not eligible to apply because your marriage occurred before your 18th birthday.');
-            return;
-        }
- 
+    { 
         //We could persist here to DB doing something like User::create and utilize the $dateOfBirth and $dateOfMarriage Carbon objects as requested
     }
 
