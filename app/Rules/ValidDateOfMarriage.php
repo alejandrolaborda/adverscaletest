@@ -35,7 +35,7 @@ class ValidDateOfMarriage implements DataAwareRule, ValidationRule
         $dateOfMarriage = Carbon::createFromDate(intval($this->data['dateOfMarriageYear']), intval($this->data['dateOfMarriageMonth']), intval($this->data['dateOfMarriageDay']));
 
         if($dateOfBirth->diffInYears($dateOfMarriage) < 0){
-            $fail('You marriage date cannot be later than your birth date.');
+            $fail('You marriage date cannot be earlier than your birth date.');
         }
 
         if($dateOfBirth->diffInYears($dateOfMarriage) < 18){
